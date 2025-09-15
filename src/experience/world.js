@@ -36,8 +36,8 @@ export class World {
         this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
         this.directionalLight.position.set(2, 2, 1);
         this.directionalLight.castShadow = true;
-        this.directionalLight.shadow.mapSize.x = 1024;
-        this.directionalLight.shadow.mapSize.y = 1024;
+        this.directionalLight.shadow.mapSize.x = 2048;
+        this.directionalLight.shadow.mapSize.y = 2048;
         this.directionalLight.shadow.camera.top = 2;
         this.directionalLight.shadow.camera.right = 2;
         this.directionalLight.shadow.camera.left = -2;
@@ -76,7 +76,7 @@ export class World {
 
         
         // RENDERER ----------------------------------------------
-        this.renderer = new THREE.WebGLRenderer({ canvas: canvas});
+        this.renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
         this.renderer.setSize(this.sizes.width, this.sizes.height);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
