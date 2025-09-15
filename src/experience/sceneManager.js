@@ -3,27 +3,24 @@ import { Timer } from 'three/src/core/Timer.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js'
 import {VRButton} from 'three/addons/webxr/VRButton.js';
 
-import { gamesEvent } from '../utils/eventEmitter';
-
-
-
-export class World {
-    constructor() {
+export class SceneManager {
+    constructor(deviceInfo, canvas) {
+        console.log('🎬 SceneManager - Initializing with device:', deviceInfo.type);
+        this.deviceInfo = deviceInfo;
+        this.canvas = canvas;
         this.initScene();
         this.animateScene();
     }
 
     /* 
-    function called from cuonstructor to setup and generate all the 3D scene
+    function called from constructor to setup and generate all the 3D scene ---------------------------------------------
     */
     initScene() {
-        const canvas = document.getElementById('canvas');
+        const canvas = this.canvas;
         this.sizes = {
             width: window.innerWidth,
             height: window.innerHeight
         }
-
-        
 
         // SCENE ----------------------------------------------
         this.scene = new THREE.Scene();
@@ -128,7 +125,8 @@ export class World {
             const currentSecond = Number(elapsedTime.toFixed(0));
             if (this.lastSecond !== currentSecond) {
                 this.lastSecond = currentSecond;
-                gamesEvent.emit('fpsUpdate', this.fps);
+                //gamesEvent.emit('fpsUpdate', this.fps);
+                console.log(`🎮 FPS: ${this.fps}`)
             }
 
             // Render
@@ -136,14 +134,9 @@ export class World {
 
             // Call tick again on the next frame
             this.renderer.setAnimationLoop(tick);
-
-            //console.log(this.camera.position);
             
         }
-        tick();
-
-        
-        
+        tick(); 
     }
 }
 
