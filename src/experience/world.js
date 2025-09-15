@@ -3,6 +3,9 @@ import { Timer } from 'three/src/core/Timer.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js'
 import {VRButton} from 'three/addons/webxr/VRButton.js';
 
+import { gamesEvent } from '../utils/eventEmitter';
+
+
 
 export class World {
     constructor() {
@@ -20,32 +23,63 @@ export class World {
             height: window.innerHeight
         }
 
+        
+
         // SCENE ----------------------------------------------
         this.scene = new THREE.Scene();
+        this.axesHelpers = new THREE.AxesHelper(2);
+        this.scene.add(this.axesHelpers);
+
+        // LIGHTS ----------------------------------------------
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+
+        this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        this.directionalLight.position.set(2, 2, 1);
+        this.directionalLight.castShadow = true;
+        this.directionalLight.shadow.mapSize.x = 1024;
+        this.directionalLight.shadow.mapSize.y = 1024;
+        this.directionalLight.shadow.camera.top = 2;
+        this.directionalLight.shadow.camera.right = 2;
+        this.directionalLight.shadow.camera.left = -2;
+        this.directionalLight.shadow.camera.bottom = -2;
+        this.directionalLight.shadow.camera.near = 1;
+        this.directionalLight.shadow.camera.far = 5;
+
+        this.scene.add(this.ambientLight, this.directionalLight);
+        //helpers
+        this.directionalLightHelper = new THREE.DirectionalLightHelper( this.directionalLight, 2 );
+        this.directionalLightCameraHelper = new THREE.CameraHelper( this.directionalLight.shadow.camera );
+        this.directionalLightHelper.visible = false;
+        this.directionalLightCameraHelper.visible = false;
+        this.scene.add( this.directionalLightHelper, this.directionalLightCameraHelper );
 
         // GEOMETRY ----------------------------------------------
         this.cube = new THREE.Mesh(
             new THREE.BoxGeometry(.5, .5, .5),
-            new THREE.MeshBasicMaterial({color: 0xff0000})
+            new THREE.MeshStandardMaterial({color: 0xff0000})
         );
+        this.cube.castShadow = true;
         this.cube.position.y = .5;
 
         this.floor = new THREE.Mesh(
             new THREE.CircleGeometry(2, 64),
-            new THREE.MeshBasicMaterial({color: 0xffffff, side: THREE.DoubleSide})
+            new THREE.MeshStandardMaterial({color: 0xffffff, side: THREE.DoubleSide})
         );
+        this.floor.receiveShadow = true;
         this.floor.rotation.x = - Math.PI * 0.5;
         this.scene.add(this.cube, this.floor);
 
         // CAMERA ----------------------------------------------
         this.camera = new THREE.PerspectiveCamera(75, this.sizes.width / this.sizes.height);
-        this.camera.position.set(.5, 1, 3);
+        this.camera.position.set(5, 4, 5); //.5, 1, 3
         this.scene.add(this.camera);
 
         
         // RENDERER ----------------------------------------------
         this.renderer = new THREE.WebGLRenderer({ canvas: canvas});
         this.renderer.setSize(this.sizes.width, this.sizes.height);
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.xr.enabled = true;
         document.body.appendChild(VRButton.createButton(this.renderer));
 
@@ -55,9 +89,6 @@ export class World {
 
         // RESIZE ----------------------------------------------
         window.addEventListener('resize', this.onResize.bind(this));
-
-        // DEBUG ----------------------------------------------
-        this.addDebug();
     }
 
     /* 
@@ -80,7 +111,6 @@ export class World {
         this.timer = new Timer();
         this.fps = 0;
  
-
         const tick = () => {
             this.fps;
             this.timer.update();
@@ -98,7 +128,7 @@ export class World {
             const currentSecond = Number(elapsedTime.toFixed(0));
             if (this.lastSecond !== currentSecond) {
                 this.lastSecond = currentSecond;
-                document.querySelector('.debug').textContent = `FPS ${this.fps}`;
+                gamesEvent.emit('fpsUpdate', this.fps);
             }
 
             // Render
@@ -106,32 +136,14 @@ export class World {
 
             // Call tick again on the next frame
             this.renderer.setAnimationLoop(tick);
+
+            //console.log(this.camera.position);
             
         }
         tick();
-    }
 
-
-    /* 
-    DEBUG FUNCTION CALLED INIT SCENE
-    */
-    addDebug() {
-        // Crea l'elemento h3
-        const debugElement = document.createElement('h3');
         
-        // Imposta la classe
-        debugElement.className = 'debug';
         
-        // Imposta lo style inline
-        debugElement.style.color = 'aqua';
-        debugElement.style.position = 'absolute';
-        debugElement.style.zIndex = '1';
-        
-        // Imposta il testo
-        debugElement.textContent = `FPS ${this.fps}`;
-        
-        // Aggiunge l'elemento al body (o a un altro contenitore specifico)
-        document.body.appendChild(debugElement);
     }
 }
 
