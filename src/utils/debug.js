@@ -2,10 +2,24 @@ import { GUI } from 'lil-gui';
 export class Debug {
     constructor() {
         this.gui = null;
-        this.folders = {};
+
+        this.folders = {
+            device: null,           
+            performance: null,
+        };
 
         this.components = {
-            deviceDetector: null
+            deviceDetector: null,
+            sceneManager: null,
+        };
+
+        this.performanceData = {
+            fps: '0',
+            triangles: '0', 
+            drawCalls: '0',
+            geometries: '0',
+            textures: '0',
+            memoryUsed: '0 MB'
         };
 
         this.isVisible = true;
@@ -23,6 +37,7 @@ export class Debug {
 
         this.addGeneralControls();
         this.setupDeviceFolder();
+        this.setupPerformanceFolder();
 
         //this.gui.close();
 
@@ -56,8 +71,9 @@ export class Debug {
     }
 
     /*
-    CREATE FOLDER FOR DEVICE INFO IN UI ------------------------------------
+    DEVICE INFO DEBUG -----------------------------------------------------------------------
     */
+    // create folder with placeholder
     setupDeviceFolder() {
         this.folders.device = this.gui.addFolder('Device Info');
 
@@ -65,10 +81,7 @@ export class Debug {
         this.folders.device.add(placeHolder, 'status').name('Status').disable();
     }
 
-    /* 
-    ADD ALL DEVICE INFO TO DEBUG -------------------------------
-    obtaining device info from main.js in initDeviceDetection()
-    */
+    // called from main.js in initDeviceDetection() to populate device data in ui
     addDeviceInfo(deviceDetector) {
         this.components.deviceDetector = deviceDetector;  
         
@@ -117,8 +130,49 @@ export class Debug {
         this.folders.device.add(deviceControls, 'memory').name('Memory').disable();
         this.folders.device.add(deviceControls, 'cores').name('CPU Cores').disable();
 
-        this.folders.device.open();
+        this.folders.device.close();
          console.log('✅ Debug - Device info displayed in panel');
+    }
+
+    /* 
+    PERFORMANCE DEBUG -------------------------------------------------------------
+    */
+    // create folder with placeholder
+    setupPerformanceFolder() {
+        this.folders.performance = this.gui.addFolder('Performance');
+        const placeholder = { status: 'Waiting for scene initialization...' };
+        this.folders.performance.add(placeholder, 'status').name('Status').disable();
+    }
+
+    // called from main.js in initScene() to populate performance data in ui
+    addPerformanceMonitoring(sceneManager) {
+        console.log('⚡ Debug - Adding performance monitoring...');
+        this.components.sceneManager = sceneManager;
+        if (!this.folders.performance) {
+            console.warn('⚠️ Debug - Performance folder not ready');
+            return;
+        }
+        this.folders.performance.destroy();
+        this.folders.performance = this.gui.addFolder('Performance');
+
+        this.folders.performance.add(this.performanceData, 'fps').name('FPS').disable().listen();
+        this.folders.performance.add(this.performanceData, 'triangles').name('Triangles').disable().listen();
+        this.folders.performance.add(this.performanceData, 'geometries').name('Geometries').disable().listen();
+        this.folders.performance.add(this.performanceData, 'textures').name('Textures').disable().listen();
+        this.folders.performance.add(this.performanceData, 'drawCalls').name('Draw Calls').disable().listen();
+        this.folders.performance.add(this.performanceData, 'memoryUsed').name('Memory Used').disable().listen();
+
+        this.folders.performance.open();
+    }
+
+    // called from SceneManager to update performance data in debug
+    updatePerformanceData(data) {
+        this.performanceData.fps = data.fps || '0';
+        this.performanceData.triangles = data.triangles || '0';
+        this.performanceData.drawCalls = data.drawCalls || '0';  
+        this.performanceData.geometries = data.geometries || '0';
+        this.performanceData.textures = data.textures || '0';
+        this.performanceData.memoryUsed = data.memoryUsed || '0 MB';
     }
 
     /* 

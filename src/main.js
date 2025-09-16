@@ -82,7 +82,8 @@ class App {
     */
     async initScene() {
         const canvas = this.createCanvas();
-        this.sceneManager = new SceneManager(this.deviceDetector.deviceInfo, canvas);
+        this.sceneManager = new SceneManager(this.deviceDetector.deviceInfo, canvas, this.debug);
+        this.debug.addPerformanceMonitoring(this.sceneManager);
         this.eventEmitter.emit('scene-ready');
         
         console.log('✅ 3D Scene ready');

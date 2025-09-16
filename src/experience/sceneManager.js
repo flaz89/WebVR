@@ -4,18 +4,107 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js'
 import {VRButton} from 'three/addons/webxr/VRButton.js';
 
 export class SceneManager {
-    constructor(deviceInfo, canvas) {
+    constructor(deviceInfo, canvas, debug = null) {
         console.log('🎬 SceneManager - Initializing with device:', deviceInfo.type);
         this.deviceInfo = deviceInfo;
         this.canvas = canvas;
+        this.debug = debug;
         this.initScene();
         this.animateScene();
+    }
+
+    /*
+    OPTIMIZING SCENE ON SPECIFIC DEVICE ------------------------------ 
+    used to define which initial setup supply based on client hardware, called at first in initScene()
+     */
+    applyDeviceOptimizations() {
+        console.log(`⚙️ Applying optimizations for: ${this.deviceInfo.type} (${this.deviceInfo.performance})`);
+
+        //default settings
+        this.settings = {
+            pixelRatio: 1,
+            shadows: false,
+            antialias: false,
+            shadowMapSize: 1024,
+            maxLights: 2
+        };
+
+        switch(this.deviceInfo.performance) {
+            case 'high':
+                this.settings.pixelRatio = Math.min(window.devicePixelRatio, 2);
+                this.settings.shadows = true;
+                this.settings.antialias = true;
+                this.settings.shadowMapSize = 2048;
+                this.settings.maxLights = 4;
+                console.log('🚀 High performance settings applied');
+                break;
+            
+            case 'medium':
+                this.settings.pixelRatio = Math.min(window.devicePixelRatio, 1.5);
+                this.settings.shadows = this.deviceInfo.type === 'desktop'; // Shadows only on desktop
+                this.settings.antialias = this.deviceInfo.type === 'desktop';
+                this.settings.shadowMapSize = 1024;
+                this.settings.maxLights = 2;
+                console.log('⚡ Medium performance settings applied');
+                break;
+            
+            case 'low':
+            default:
+                this.settings.pixelRatio = 1;
+                this.settings.shadows = false;
+                this.settings.antialias = false;
+                this.settings.shadowMapSize = 512;
+                this.settings.maxLights = 1;
+                console.log('🔋 Low performance settings applied');
+                break;
+        }
+
+        if (this.deviceInfo.type === 'vr-headset') {
+            this.settings.pixelRatio = 1; // Always 1 for VR performance
+            this.settings.antialias = false; // Disable for better VR performance
+            console.log('🥽 VR optimizations applied');
+        }
+    }
+
+    /* 
+    COLLECT RENDERER DATA ----------------------------------------------------
+    called in tick() to collect data each second
+    */
+    collectPerformanceData() {
+
+        const performanceData = {
+            fps: this.fps || '0',
+            triangles: '0',
+            drawCalls: '0', 
+            geometries: '0',
+            textures: '0',
+            memoryUsed: '0 MB'
+        };
+
+        if (this.renderer && this.renderer.info) {
+            const info = this.renderer.info;
+            performanceData.triangles = info.render.triangles.toLocaleString();
+            performanceData.drawCalls = info.render.calls.toString();
+            performanceData.geometries = info.memory.geometries.toString();
+            performanceData.textures = info.memory.textures.toString();
+            
+            this.renderer.info.reset(); //reset renderer each frame
+        }
+
+        if ('memory' in performance && performance.memory) {
+            const memoryMB = Math.round(performance.memory.usedJSHeapSize / 1024 / 1024);
+            performanceData.memoryUsed = `${memoryMB} MB`;
+        }
+
+        return performanceData;
     }
 
     /* 
     function called from constructor to setup and generate all the 3D scene ---------------------------------------------
     */
     initScene() {
+        this.applyDeviceOptimizations();
+
         const canvas = this.canvas;
         this.sizes = {
             width: window.innerWidth,
@@ -32,9 +121,9 @@ export class SceneManager {
 
         this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
         this.directionalLight.position.set(2, 2, 1);
-        this.directionalLight.castShadow = true;
-        this.directionalLight.shadow.mapSize.x = 2048;
-        this.directionalLight.shadow.mapSize.y = 2048;
+        this.directionalLight.castShadow = this.settings.shadows;
+        this.directionalLight.shadow.mapSize.x = this.settings.shadowMapSize;
+        this.directionalLight.shadow.mapSize.y = this.settings.shadowMapSize;
         this.directionalLight.shadow.camera.top = 2;
         this.directionalLight.shadow.camera.right = 2;
         this.directionalLight.shadow.camera.left = -2;
@@ -55,14 +144,14 @@ export class SceneManager {
             new THREE.BoxGeometry(.5, .5, .5),
             new THREE.MeshStandardMaterial({color: 0xff0000})
         );
-        this.cube.castShadow = true;
+        this.cube.castShadow = this.settings.shadows;
         this.cube.position.y = .5;
 
         this.floor = new THREE.Mesh(
             new THREE.CircleGeometry(2, 64),
             new THREE.MeshStandardMaterial({color: 0xffffff, side: THREE.DoubleSide})
         );
-        this.floor.receiveShadow = true;
+        this.floor.receiveShadow = this.settings.shadows;
         this.floor.rotation.x = - Math.PI * 0.5;
         this.scene.add(this.cube, this.floor);
 
@@ -73,10 +162,11 @@ export class SceneManager {
 
         
         // RENDERER ----------------------------------------------
-        this.renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        this.renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: this.settings.antialias });
         this.renderer.setSize(this.sizes.width, this.sizes.height);
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.setPixelRatio(this.settings.pixelRatio);
+        this.renderer.shadowMap.enabled = this.settings.shadows;
+        if (this.settings.shadows) this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.renderer.xr.enabled = true;
         document.body.appendChild(VRButton.createButton(this.renderer));
 
@@ -106,10 +196,9 @@ export class SceneManager {
     */
     animateScene() {
         this.timer = new Timer();
-        this.fps = 0;
+        this.fps;
  
         const tick = () => {
-            this.fps;
             this.timer.update();
             this.fps = ((1/ this.timer.getDelta())).toFixed(1);
             const elapsedTime = this.timer.getElapsed();
@@ -126,7 +215,11 @@ export class SceneManager {
             if (this.lastSecond !== currentSecond) {
                 this.lastSecond = currentSecond;
                 //gamesEvent.emit('fpsUpdate', this.fps);
-                console.log(`🎮 FPS: ${this.fps}`)
+                if (this.debug) {
+                    const performanceData = this.collectPerformanceData();
+                    this.debug.updatePerformanceData(performanceData);
+                }
+                //console.log(`🎮 FPS: ${this.fps}`);
             }
 
             // Render

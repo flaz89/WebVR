@@ -48,6 +48,7 @@ export class DeviceDetector {
     */
     classifyDevice(info) {
         const ua = navigator.userAgent.toLowerCase();
+
         console.log('🕵️ Analyzing User Agent:', ua);
 
         // VR Headsets
@@ -59,6 +60,9 @@ export class DeviceDetector {
         }
         if (ua.includes('vive') || ua.includes('steamvr')) {
             return 'steamvr-vr';
+        }
+        if (ua.includes('visionos')) {
+            return 'apple-vision-pro';
         }
 
         // PC with VR capability
@@ -205,7 +209,10 @@ export class DeviceDetector {
     */
     getDeviceEmoji() {
         const emojis = {
-            'vr-headset': '🥽',
+            'meta-quest': '🥽',
+            'apple-vision-pro': '🥽',
+            'pico-vr':  '🥽',
+            'steamvr-vr': '🥽',
             'mobile': '📱',
             'tablet': '📱',
             'desktop': '💻'
