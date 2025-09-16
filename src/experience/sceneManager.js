@@ -100,6 +100,79 @@ export class SceneManager {
     }
 
     /* 
+    TOGGLE SHADOWS ------------------------------------------------------------------------------------------- 
+    allows debug to manage shadows, called from debug.js in function addSCeneControls()
+    */
+    toggleShadows(enabled) {
+
+        this.renderer.shadowMap.enabled = enabled;
+        this.directionalLight.castShadow = enabled;
+        this.cube.castShadow = enabled;
+        this.floor.receiveShadow = enabled;
+        
+        this.settings.shadows = enabled;
+    }
+
+    /* 
+    TOGGLE ANTIALIAS -------------------------------------------------------------------------------------------
+    allows debug to manage antialiasing, called from debug.js in function addSCeneControls()
+    */
+    toggleAntialias(enabled) {
+    console.log(`✨ Antialias toggle: ${enabled} (Note: requires page reload for full effect)`);
+    this.settings.antialias = enabled;
+    // Note: Per il vero antialias serve ricreare il renderer, ma è troppo pesante
+    }
+
+    /* 
+    TOGGLE ANTIALIAS -------------------------------------------------------------------------------------------
+    allows debug to manage antialiasing, called from debug.js in function addSCeneControls()
+    */
+    toggleWireframe(enabled) {
+        this.cube.material.wireframe = enabled;
+        this.floor.material.wireframe = enabled;
+    }
+
+    /* 
+    SET BACKGROUND COLOR -------------------------------------------------------------------------------------------
+    allows debug to manage scene background color, called from debug.js in function addSCeneControls()
+    */
+    setBackgroundColor(color) {
+        console.log('CI SONOOOOOOOOO');
+        
+        this.scene.background.set(color);
+    }
+
+    /* 
+    TOGGLE HELPERS -------------------------------------------------------------------------------------------
+    called from debug.js in function addSCeneControls()
+    */
+    toggleAxes(visible) {
+        this.axesHelpers.visible = visible;
+    }
+
+    toggleLightHelpers(visible) {
+        this.directionalLightHelper.visible = visible;
+    }
+
+    toggleCameraHelper(visible) {
+        this.directionalLightCameraHelper.visible = visible;
+    }
+
+    setAmbientIntensity(intensity) {
+        this.ambientLight.intensity = intensity;
+    }
+
+    setDirectionalIntensity(intensity) {
+        this.directionalLight.intensity = intensity;
+    }
+
+    setDirectionalPosition(x, y, z) {
+        this.directionalLight.position.set(x, y, z);
+    }
+
+    
+
+    /* 
     function called from constructor to setup and generate all the 3D scene ---------------------------------------------
     */
     initScene() {
@@ -113,7 +186,9 @@ export class SceneManager {
 
         // SCENE ----------------------------------------------
         this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x000011);
         this.axesHelpers = new THREE.AxesHelper(2);
+        this.axesHelpers.visible = false;
         this.scene.add(this.axesHelpers);
 
         // LIGHTS ----------------------------------------------
@@ -129,7 +204,7 @@ export class SceneManager {
         this.directionalLight.shadow.camera.left = -2;
         this.directionalLight.shadow.camera.bottom = -2;
         this.directionalLight.shadow.camera.near = 1;
-        this.directionalLight.shadow.camera.far = 5;
+        this.directionalLight.shadow.camera.far = 20;
 
         this.scene.add(this.ambientLight, this.directionalLight);
         //helpers

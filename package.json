@@ -19,6 +19,6 @@
   "dependencies": {
     "lil-gui": "^0.20.0",
     "three": "^0.180.0",
-    "vercel": "^48.0.0"
+    "vercel": "^48.0.1"
   }
 }

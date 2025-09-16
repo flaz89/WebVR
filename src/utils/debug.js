@@ -3,16 +3,14 @@ export class Debug {
     constructor() {
         this.gui = null;
 
-        this.folders = {
-            device: null,           
-            performance: null,
-        };
+        this.folders = {};
 
         this.components = {
             deviceDetector: null,
             sceneManager: null,
         };
 
+        // object performance data in debug
         this.performanceData = {
             fps: '0',
             triangles: '0', 
@@ -20,6 +18,25 @@ export class Debug {
             geometries: '0',
             textures: '0',
             memoryUsed: '0 MB'
+        };
+
+        // object scene controls in debug
+        this.sceneControls = {
+            // Rendering
+            shadows: true,
+            antialias: true,
+            wireframe: false,
+            backgroundColor: '#000011',
+            // Helpers
+            showAxes: false,
+            showLightHelpers: false,
+            showCameraHelper: false,
+            // Lights
+            ambientIntensity: 0.5,
+            directionalIntensity: 1.5,
+            directionalX: 2,
+            directionalY: 2,
+            directionalZ: 1
         };
 
         this.isVisible = true;
@@ -30,14 +47,16 @@ export class Debug {
     INIT DEBUG UI ----------------------------------------
     */
     init() {
+
         this.gui = new GUI({ title:'App Debug',  width: 300, closeFolders: false });
         this.gui.domElement.style.position = 'fixed';
         this.gui.domElement.style.top = '10px';
         this.gui.domElement.style.right = '10px';
 
-        this.addGeneralControls();
-        this.setupDeviceFolder();
         this.setupPerformanceFolder();
+        this.setupSceneFolder();
+        this.setupDeviceFolder();
+        this.addGeneralControls();
 
         //this.gui.close();
 
@@ -45,10 +64,12 @@ export class Debug {
     }
 
     /* 
-    ADD GENERAL CONTROLS ------------------------------
+    ADD GENERAL CONTROLS --------------------------------------------------------------------------
     as toggle visibility, fullscreen mode, reload page called from init()
     */
     addGeneralControls() {
+        this.folders.general = this.gui.addFolder('General Controls');
+
         const generalControls = {
             visible: this.isVisible,
             toggleFullScreen: () => {
@@ -60,14 +81,14 @@ export class Debug {
             }
         }
 
-        this.gui.add(generalControls, 'visible').name('Show Debug').onChange((value) => {
+        this.folders.general.add(generalControls, 'visible').name('Show Debug').onChange((value) => {
                 this.isVisible = value;
                 this.toggleVisibility(value);
             }
         );
 
-        this.gui.add(generalControls, 'toggleFullScreen').name('Fullscreen');
-            
+        this.folders.general.add(generalControls, 'toggleFullScreen').name('Fullscreen');
+        this.folders.general.close();   
     }
 
     /*
@@ -90,8 +111,9 @@ export class Debug {
             return;
         }
 
-        this.folders.device.destroy();
-        this.folders.device = this.gui.addFolder('Device Info');
+        this.folders.device.controllersRecursive().forEach(controller => {
+        controller.destroy();
+        });
 
         const deviceInfo = deviceDetector.deviceInfo;
 
@@ -152,8 +174,9 @@ export class Debug {
             console.warn('⚠️ Debug - Performance folder not ready');
             return;
         }
-        this.folders.performance.destroy();
-        this.folders.performance = this.gui.addFolder('Performance');
+        this.folders.performance.controllersRecursive().forEach(controller => {
+        controller.destroy();
+        });
 
         this.folders.performance.add(this.performanceData, 'fps').name('FPS').disable().listen();
         this.folders.performance.add(this.performanceData, 'triangles').name('Triangles').disable().listen();
@@ -162,10 +185,10 @@ export class Debug {
         this.folders.performance.add(this.performanceData, 'drawCalls').name('Draw Calls').disable().listen();
         this.folders.performance.add(this.performanceData, 'memoryUsed').name('Memory Used').disable().listen();
 
-        this.folders.performance.open();
+        this.folders.performance.close();
     }
 
-    // called from SceneManager to update performance data in debug
+    // called from SceneManager in tick() to update performance data in debug
     updatePerformanceData(data) {
         this.performanceData.fps = data.fps || '0';
         this.performanceData.triangles = data.triangles || '0';
@@ -176,7 +199,62 @@ export class Debug {
     }
 
     /* 
-    TOGGLE DEBUG VISIBILITY ------------------------------------
+    SCENE ENVIRONMENT DEBUG --------------------------------------------------------
+    */
+     // create folder with placeholder
+    setupSceneFolder() {
+        console.warn('🎬 Debug - Setting up scene folder...');
+        this.folders.scene = this.gui.addFolder('Scene Controls');
+        const placeholder = { status: 'Waiting for scene initialization...' };
+        this.folders.scene.add(placeholder, 'status').name('Status').disable();
+        this.folders.scene.close();
+    }
+
+    // called from main.js in initScene() to populate scene controls in ui
+    addSceneControls(sceneManager) {
+
+        if (!this.folders.scene || !sceneManager) {
+            console.warn('⚠️ Debug - Scene folder or scene manager not ready');
+            return;
+        }
+
+        this.folders.scene.controllersRecursive().forEach(controller => {
+            controller.destroy();
+        });
+
+        this.sceneControls.shadows = sceneManager.settings?.shadows || false;
+        this.sceneControls.antialias = sceneManager.settings?.antialias || false;
+        this.sceneControls.ambientIntensity = sceneManager.ambientLight?.intensity || 0.5;
+        this.sceneControls.directionalIntensity = sceneManager.directionalLight?.intensity || 1.5;
+
+        // rendering folder
+        const renderingFolder = this.folders.scene.addFolder('Rendering');
+        renderingFolder.add(this.sceneControls, 'shadows').name('Shadows').onFinishChange((value) => { sceneManager.toggleShadows(value); });
+        renderingFolder.add(this.sceneControls, 'antialias').name('Antialias').onFinishChange((value) => { sceneManager.toggleAntialias(value); });
+        renderingFolder.add(this.sceneControls, 'wireframe').name('Wireframe').onFinishChange((value) => { sceneManager.toggleWireframe(value); });
+        renderingFolder.addColor(this.sceneControls, 'backgroundColor').name('Background').onChange((value) => { sceneManager.setBackgroundColor(value); });
+        renderingFolder.close();
+        
+        // helpers folder
+        const helpersFolder = this.folders.scene.addFolder('Helpers');
+        helpersFolder.add(this.sceneControls, 'showAxes').name('Axes Helper').onFinishChange((value) => { sceneManager.toggleAxes(value); });
+        helpersFolder.add(this.sceneControls, 'showLightHelpers').name('Light Helpers').onFinishChange((value) => { sceneManager.toggleLightHelpers(value); });
+        helpersFolder.add(this.sceneControls, 'showCameraHelper').name('Camera Light Helper').onFinishChange((value) => { sceneManager.toggleCameraHelper(value); });
+        helpersFolder.close();
+
+        // lights controls
+        const lightsFolder = this.folders.scene.addFolder('Lights');
+        lightsFolder.add(this.sceneControls, 'ambientIntensity', 0, 2, 0.1).name('Ambient').onChange((value) => { sceneManager.setAmbientIntensity(value); });
+        lightsFolder.add(this.sceneControls, 'directionalIntensity', 0, 5, 0.1).name('Directional').onChange((value) => { sceneManager.setDirectionalIntensity(value); });
+        lightsFolder.add(this.sceneControls, 'directionalX', -10, 10, 0.5).name('X').onChange((value) => { sceneManager.setDirectionalPosition(value, this.sceneControls.directionalY, this.sceneControls.directionalZ); });
+        lightsFolder.add(this.sceneControls, 'directionalY', 0, 10, 0.5).name('Y').onChange((value) => { sceneManager.setDirectionalPosition(this.sceneControls.directionalX, value, this.sceneControls.directionalZ); });
+        lightsFolder.add(this.sceneControls, 'directionalZ', -10, 10, 0.5).name('Z').onChange((value) => { sceneManager.setDirectionalPosition(this.sceneControls.directionalX, this.sceneControls.directionalY, value); });
+        lightsFolder.close();
+
+    }
+
+    /* 
+    TOGGLE DEBUG VISIBILITY ---------------------------------------------------------------------
     called from setupKeyboardShortcut() and from generalControls{}
     */
     toggleVisibility(visible) {
@@ -186,7 +264,7 @@ export class Debug {
     }
     
     /* 
-    EVENT LISTENER ON 'H' KEY BUTTON ----------------------------
+    EVENT LISTENER ON 'H' KEY BUTTON -------------------------------------------------------------
     clicking 'h' hide debug menu
     */
     setupKeyboardShortcut() {
